@@ -1,4 +1,5 @@
 use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use sdl2::video::GLProfile;
 
 fn main() -> Result<(), String> {
@@ -26,6 +27,10 @@ fn main() -> Result<(), String> {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::ESCAPE),
+                    ..
+                } => break 'running,
                 _ => {}
             }
         }
