@@ -81,20 +81,28 @@ fn main() -> Result<(), String> {
         gl.enable_vertex_attrib_array(0);
     }
     unsafe {
+        let stride = 6 * std::mem::size_of::<f32>() as i32;
+
+        // position
+        gl.enable_vertex_attrib_array(0);
+        gl.vertex_attrib_pointer_f32(0, 3, glow::FLOAT, false, stride, 0);
+
+        // color
+        gl.enable_vertex_attrib_array(1);
         gl.vertex_attrib_pointer_f32(
-            0,
+            1,
             3,
             glow::FLOAT,
             false,
+            stride,
             3 * std::mem::size_of::<f32>() as i32,
-            0,
         );
     }
 
-    let vertices: [f32; 9] = [
-        -0.5, -0.5, 0.0, // Bottom left
-        0.5, -0.5, 0.0, // Bottom right
-        0.0, 0.5, 0.0, // Top
+    let vertices: [f32; 36] = [
+        0.5, 0.5, 0.0, 1.0, 0.0, 0.0, -0.5, 0.5, 0.0, 0.0, 1.0, 0.0, -0.5, -0.5, 0.0, 0.0, 0.0,
+        1.0, 0.5, -0.5, 0.0, 1.0, 1.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.0, 1.0, -0.5, -0.5, 0.0, 0.0,
+        1.0, 1.0,
     ];
 
     unsafe {
@@ -128,7 +136,7 @@ fn main() -> Result<(), String> {
             gl.use_program(Some(shader_program));
             gl.bind_vertex_array(Some(vao));
 
-            gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            gl.draw_arrays(glow::TRIANGLES, 0, 6);
         }
 
         window.gl_swap_window();
