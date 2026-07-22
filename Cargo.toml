@@ -1,7 +1,9 @@
 [package]
 name = "Mine"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-glfw = "*"
+sdl2 = "0.38"
+glow = "0.16"
+bytemuck = "1.24"

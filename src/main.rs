@@ -1,39 +1,37 @@
-use glfw::{Action, Context, Key, WindowHint, fail_on_errors};
+use sdl2::event::Event;
+use sdl2::video::GLProfile;
 
-fn main() {
-    let WINDOW_WIDTH: i32 = 1500;
-    let WINDOW_HEIGHT: i32 = 800;
+fn main() -> Result<(), String> {
+    let sdl = sdl2::init()?;
+    let video = sdl.video()?;
 
-    let mut glfw = glfw::init(fail_on_errors!()).unwrap();
+    {
+        let gl_attr = video.gl_attr();
+        gl_attr.set_context_profile(GLProfile::Core);
+        gl_attr.set_context_version(3, 3);
+    }
 
-    glfw.window_hint(WindowHint::Resizable(false));
-    let (mut window, events) = glfw
-        .create_window(
-            WINDOW_WIDTH as u32,
-            WINDOW_HEIGHT as u32,
-            "Mine",
-            glfw::WindowMode::Windowed,
-        )
-        .unwrap();
-    window.set_size(WINDOW_WIDTH, WINDOW_HEIGHT);
+    let window = video
+        .window("Mine", 1200, 800)
+        .opengl()
+        .build()
+        .map_err(|e| e.to_string())?;
 
-    window.set_key_polling(true);
+    let _gl_context = window.gl_create_context()?;
+    window.gl_make_current(&_gl_context)?;
 
-    let (width, height) = window.get_size();
-    println!("Window Initiated with size: {}x{}", width, height);
+    let mut event_pump = sdl.event_pump()?;
 
-    window.make_current();
-
-    while !window.should_close() {
-        glfw.poll_events();
-        for (_, event) in glfw::flush_messages(&events) {
+    'running: loop {
+        for event in event_pump.poll_iter() {
             match event {
-                glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    window.set_should_close(true);
-                }
+                Event::Quit { .. } => break 'running,
                 _ => {}
             }
         }
-        window.swap_buffers();
+
+        window.gl_swap_window();
     }
+
+    Ok(())
 }
