@@ -1,3 +1,4 @@
+use glow::HasContext;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::video::GLProfile;
@@ -21,6 +22,10 @@ fn main() -> Result<(), String> {
     let _gl_context = window.gl_create_context()?;
     window.gl_make_current(&_gl_context)?;
 
+    let gl = unsafe {
+        glow::Context::from_loader_function(|s| video.gl_get_proc_address(s) as *const _)
+    };
+
     let mut event_pump = sdl.event_pump()?;
 
     'running: loop {
@@ -33,6 +38,11 @@ fn main() -> Result<(), String> {
                 } => break 'running,
                 _ => {}
             }
+        }
+
+        unsafe {
+            gl.clear_color(0.1, 0.2, 0.3, 1.0);
+            gl.clear(glow::COLOR_BUFFER_BIT);
         }
 
         window.gl_swap_window();
