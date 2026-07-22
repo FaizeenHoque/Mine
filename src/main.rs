@@ -65,6 +65,8 @@ fn main() -> Result<(), String> {
         gl.use_program(Some(shader_program));
     }
 
+    let offset_location = unsafe { gl.get_uniform_location(shader_program, "offset") };
+
     let vao = unsafe { gl.create_vertex_array()? };
     unsafe {
         gl.bind_vertex_array(Some(vao));
@@ -80,6 +82,10 @@ fn main() -> Result<(), String> {
     unsafe {
         gl.enable_vertex_attrib_array(0);
     }
+
+    let mut x = 0.0f32;
+    let mut y = 0.0f32;
+
     unsafe {
         let stride = 6 * std::mem::size_of::<f32>() as i32;
 
@@ -97,6 +103,8 @@ fn main() -> Result<(), String> {
             stride,
             3 * std::mem::size_of::<f32>() as i32,
         );
+
+        gl.uniform_2_f32(offset_location.as_ref(), x, y);
     }
 
     let vertices: [f32; 36] = [
@@ -119,10 +127,32 @@ fn main() -> Result<(), String> {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'running,
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => y += 0.05,
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::S),
+                    ..
+                } => y -= 0.05,
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => x -= 0.05,
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::D),
+                    ..
+                } => x += 0.05,
+
                 Event::KeyDown {
                     keycode: Some(Keycode::ESCAPE),
                     ..
                 } => break 'running,
+
                 _ => {}
             }
         }
@@ -130,6 +160,16 @@ fn main() -> Result<(), String> {
         unsafe {
             gl.clear_color(0.1, 0.2, 0.3, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
+        }
+
+        unsafe {
+            gl.use_program(Some(shader_program));
+
+            gl.uniform_2_f32(offset_location.as_ref(), x, y);
+
+            gl.bind_vertex_array(Some(vao));
+
+            gl.draw_arrays(glow::TRIANGLES, 0, 6);
         }
 
         unsafe {
