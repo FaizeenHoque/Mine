@@ -7,27 +7,8 @@ fn main() -> Result<(), String> {
     let sdl = sdl2::init()?;
     let video = sdl.video()?;
 
-    let vertex_shader_source = r#"
-    #version 330 core
-
-    layout (location = 0) in vec3 aPos;
-
-    void main()
-    {
-        gl_Position = vec4(aPos, 1.0);
-    }
-    "#;
-
-    let fragment_shader_source = r#"
-    #version 330 core
-
-    out vec4 FragColor;
-
-    void main()
-    {
-        FragColor = vec4(1.0, 0.5, 0.2, 1.0);
-    }
-    "#;
+    let vertex_shader_source = include_str!("../assets/shaders/triangle.vert");
+    let fragment_shader_source = include_str!("../assets/shaders/triangle.frag");
 
     {
         let gl_attr = video.gl_attr();
@@ -50,7 +31,7 @@ fn main() -> Result<(), String> {
 
     let vertex_shader = unsafe { gl.create_shader(glow::VERTEX_SHADER)? }; // create empty vertex shader
     unsafe {
-        gl.shader_source(vertex_shader, vertex_shader_source); // give it a source code
+        gl.shader_source(vertex_shader, &vertex_shader_source); // give it a source code
         gl.compile_shader(vertex_shader); // compile it
 
         if !gl.get_shader_compile_status(vertex_shader) {
@@ -61,7 +42,7 @@ fn main() -> Result<(), String> {
 
     let fragment_shader = unsafe { gl.create_shader(glow::FRAGMENT_SHADER)? };
     unsafe {
-        gl.shader_source(fragment_shader, fragment_shader_source);
+        gl.shader_source(fragment_shader, &fragment_shader_source);
         gl.compile_shader(fragment_shader);
 
         if !gl.get_shader_compile_status(fragment_shader) {
@@ -97,6 +78,9 @@ fn main() -> Result<(), String> {
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
     }
     unsafe {
+        gl.enable_vertex_attrib_array(0);
+    }
+    unsafe {
         gl.vertex_attrib_pointer_f32(
             0,
             3,
@@ -105,9 +89,6 @@ fn main() -> Result<(), String> {
             3 * std::mem::size_of::<f32>() as i32,
             0,
         );
-    }
-    unsafe {
-        gl.enable_vertex_attrib_array(0);
     }
 
     let vertices: [f32; 9] = [
