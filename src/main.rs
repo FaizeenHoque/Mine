@@ -7,6 +7,28 @@ fn main() -> Result<(), String> {
     let sdl = sdl2::init()?;
     let video = sdl.video()?;
 
+    let vertex_shader_source = r#"
+    #version 330 core
+
+    layout (location = 0) in vec3 aPos;
+
+    void main()
+    {
+        gl_Position = vec4(aPos, 1.0);
+    }
+    "#;
+
+    let fragment_shader_source = r#"
+    #version 330 core
+
+    out vec4 FragColor;
+
+    void main()
+    {
+        FragColor = vec4(1.0, 0.5, 0.2, 1.0);
+    }
+    "#;
+
     {
         let gl_attr = video.gl_attr();
         gl_attr.set_context_profile(GLProfile::Core);
@@ -26,6 +48,82 @@ fn main() -> Result<(), String> {
         glow::Context::from_loader_function(|s| video.gl_get_proc_address(s) as *const _)
     };
 
+    let vertex_shader = unsafe { gl.create_shader(glow::VERTEX_SHADER)? }; // create empty vertex shader
+    unsafe {
+        gl.shader_source(vertex_shader, vertex_shader_source); // give it a source code
+        gl.compile_shader(vertex_shader); // compile it
+
+        if !gl.get_shader_compile_status(vertex_shader) {
+            // Check if compilation succeeded
+            panic!("{}", gl.get_shader_info_log(vertex_shader));
+        }
+    }
+
+    let fragment_shader = unsafe { gl.create_shader(glow::FRAGMENT_SHADER)? };
+    unsafe {
+        gl.shader_source(fragment_shader, fragment_shader_source);
+        gl.compile_shader(fragment_shader);
+
+        if !gl.get_shader_compile_status(fragment_shader) {
+            panic!("{}", gl.get_shader_info_log(fragment_shader));
+        }
+    }
+
+    let shader_program = unsafe { gl.create_program()? };
+    unsafe {
+        gl.attach_shader(shader_program, vertex_shader);
+        gl.attach_shader(shader_program, fragment_shader);
+        gl.link_program(shader_program);
+        gl.delete_shader(vertex_shader);
+        gl.delete_shader(fragment_shader);
+
+        if !gl.get_program_link_status(shader_program) {
+            panic!("{}", gl.get_program_info_log(shader_program));
+        }
+
+        gl.use_program(Some(shader_program));
+    }
+
+    let vao = unsafe { gl.create_vertex_array()? };
+    unsafe {
+        gl.bind_vertex_array(Some(vao));
+    }
+    let vbo = unsafe { gl.create_buffer()? };
+    unsafe {
+        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+    };
+
+    unsafe {
+        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+    }
+    unsafe {
+        gl.vertex_attrib_pointer_f32(
+            0,
+            3,
+            glow::FLOAT,
+            false,
+            3 * std::mem::size_of::<f32>() as i32,
+            0,
+        );
+    }
+    unsafe {
+        gl.enable_vertex_attrib_array(0);
+    }
+
+    let vertices: [f32; 9] = [
+        -0.5, -0.5, 0.0, // Bottom left
+        0.5, -0.5, 0.0, // Bottom right
+        0.0, 0.5, 0.0, // Top
+    ];
+
+    unsafe {
+        gl.buffer_data_u8_slice(
+            glow::ARRAY_BUFFER,
+            bytemuck::cast_slice(&vertices),
+            glow::STATIC_DRAW,
+        );
+    }
+
     let mut event_pump = sdl.event_pump()?;
 
     'running: loop {
@@ -43,6 +141,13 @@ fn main() -> Result<(), String> {
         unsafe {
             gl.clear_color(0.1, 0.2, 0.3, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
+        }
+
+        unsafe {
+            gl.use_program(Some(shader_program));
+            gl.bind_vertex_array(Some(vao));
+
+            gl.draw_arrays(glow::TRIANGLES, 0, 3);
         }
 
         window.gl_swap_window();
