@@ -76,6 +76,11 @@ fn main() -> Result<(), String> {
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
     };
 
+    let ebo = unsafe { gl.create_buffer()? };
+    unsafe {
+        gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(ebo));
+    };
+
     unsafe {
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
     }
@@ -107,16 +112,23 @@ fn main() -> Result<(), String> {
         gl.uniform_2_f32(offset_location.as_ref(), x, y);
     }
 
-    let vertices: [f32; 36] = [
+    let vertices: [f32; 24] = [
         0.5, 0.5, 0.0, 1.0, 0.0, 0.0, -0.5, 0.5, 0.0, 0.0, 1.0, 0.0, -0.5, -0.5, 0.0, 0.0, 0.0,
-        1.0, 0.5, -0.5, 0.0, 1.0, 1.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.0, 1.0, -0.5, -0.5, 0.0, 0.0,
-        1.0, 1.0,
+        1.0, 0.5, -0.5, 0.0, 1.0, 1.0, 0.0,
     ];
+
+    let indices: [u32; 6] = [0, 1, 2, 0, 3, 2];
 
     unsafe {
         gl.buffer_data_u8_slice(
             glow::ARRAY_BUFFER,
             bytemuck::cast_slice(&vertices),
+            glow::STATIC_DRAW,
+        );
+
+        gl.buffer_data_u8_slice(
+            glow::ELEMENT_ARRAY_BUFFER,
+            bytemuck::cast_slice(&indices),
             glow::STATIC_DRAW,
         );
     }
@@ -169,14 +181,7 @@ fn main() -> Result<(), String> {
 
             gl.bind_vertex_array(Some(vao));
 
-            gl.draw_arrays(glow::TRIANGLES, 0, 6);
-        }
-
-        unsafe {
-            gl.use_program(Some(shader_program));
-            gl.bind_vertex_array(Some(vao));
-
-            gl.draw_arrays(glow::TRIANGLES, 0, 6);
+            gl.draw_elements(glow::TRIANGLES, 6, glow::UNSIGNED_INT, 0);
         }
 
         window.gl_swap_window();
