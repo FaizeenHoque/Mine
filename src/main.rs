@@ -1,78 +1,18 @@
+mod renderer;
+
 use glow::HasContext;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::video::GLProfile;
 
-struct Mesh {
-    vao: glow::VertexArray,
-    vbo: glow::Buffer,
-    ebo: glow::Buffer,
-    index_count: i32,
-}
-
-impl Mesh {
-    pub fn new(gl: &glow::Context, vertices: &[f32], indices: &[u32]) -> Result<Self, String> {
-        unsafe {
-            let vao = gl.create_vertex_array()?;
-            let vbo = gl.create_buffer()?;
-            let ebo = gl.create_buffer()?;
-
-            gl.bind_vertex_array(Some(vao));
-
-            gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-            gl.buffer_data_u8_slice(
-                glow::ARRAY_BUFFER,
-                bytemuck::cast_slice(vertices),
-                glow::STATIC_DRAW,
-            );
-
-            gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(ebo));
-            gl.buffer_data_u8_slice(
-                glow::ELEMENT_ARRAY_BUFFER,
-                bytemuck::cast_slice(indices),
-                glow::STATIC_DRAW,
-            );
-
-            let stride = 6 * std::mem::size_of::<f32>() as i32;
-
-            // position
-            gl.enable_vertex_attrib_array(0);
-            gl.vertex_attrib_pointer_f32(0, 3, glow::FLOAT, false, stride, 0);
-
-            // color
-            gl.enable_vertex_attrib_array(1);
-            gl.vertex_attrib_pointer_f32(
-                1,
-                3,
-                glow::FLOAT,
-                false,
-                stride,
-                3 * std::mem::size_of::<f32>() as i32,
-            );
-
-            Ok(Self {
-                vao,
-                vbo,
-                ebo,
-                index_count: indices.len() as i32,
-            })
-        }
-    }
-
-    pub fn draw(&self, gl: &glow::Context) {
-        unsafe {
-            gl.bind_vertex_array(Some(self.vao));
-            gl.draw_elements(glow::TRIANGLES, self.index_count, glow::UNSIGNED_INT, 0);
-        }
-    }
-}
+use renderer::*;
 
 fn main() -> Result<(), String> {
     let sdl = sdl2::init()?;
     let video = sdl.video()?;
 
-    let vertex_shader_source = include_str!("../assets/shaders/triangle.vert");
-    let fragment_shader_source = include_str!("../assets/shaders/triangle.frag");
+    let vertex_shader_source: &str = include_str!("../assets/shaders/triangle.vert");
+    let fragment_shader_source: &str = include_str!("../assets/shaders/triangle.frag");
 
     {
         let gl_attr = video.gl_attr();
@@ -93,43 +33,7 @@ fn main() -> Result<(), String> {
         glow::Context::from_loader_function(|s| video.gl_get_proc_address(s) as *const _)
     };
 
-    let vertex_shader = unsafe { gl.create_shader(glow::VERTEX_SHADER)? }; // create empty vertex shader
-    unsafe {
-        gl.shader_source(vertex_shader, &vertex_shader_source); // give it a source code
-        gl.compile_shader(vertex_shader); // compile it
-
-        if !gl.get_shader_compile_status(vertex_shader) {
-            // Check if compilation succeeded
-            panic!("{}", gl.get_shader_info_log(vertex_shader));
-        }
-    }
-
-    let fragment_shader = unsafe { gl.create_shader(glow::FRAGMENT_SHADER)? };
-    unsafe {
-        gl.shader_source(fragment_shader, &fragment_shader_source);
-        gl.compile_shader(fragment_shader);
-
-        if !gl.get_shader_compile_status(fragment_shader) {
-            panic!("{}", gl.get_shader_info_log(fragment_shader));
-        }
-    }
-
-    let shader_program = unsafe { gl.create_program()? };
-    unsafe {
-        gl.attach_shader(shader_program, vertex_shader);
-        gl.attach_shader(shader_program, fragment_shader);
-        gl.link_program(shader_program);
-        gl.delete_shader(vertex_shader);
-        gl.delete_shader(fragment_shader);
-
-        if !gl.get_program_link_status(shader_program) {
-            panic!("{}", gl.get_program_info_log(shader_program));
-        }
-
-        gl.use_program(Some(shader_program));
-    }
-
-    let offset_location = unsafe { gl.get_uniform_location(shader_program, "offset") };
+    let shader = Shader::new(&gl, vertex_shader_source, fragment_shader_source)?;
 
     let mut x = 0.0f32;
     let mut y = 0.0f32;
@@ -182,10 +86,10 @@ fn main() -> Result<(), String> {
         unsafe {
             gl.clear_color(0.1, 0.2, 0.3, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
-
-            gl.use_program(Some(shader_program));
-            gl.uniform_2_f32(offset_location.as_ref(), x, y);
         }
+
+        shader.bind(&gl);
+        shader.set_uniform_2f(&gl, "offset", x, y);
 
         mesh.draw(&gl);
 
